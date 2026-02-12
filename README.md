@@ -3,7 +3,7 @@ Este es el proyecto para el desafío profesional para el curso en digitalhouse.
 
 Entregables
 
-Te comparto información para que puedas revisar lo que corresponde a los entrañables solicitados:
+Te comparto información para que puedas revisar lo que corresponde a los entregables solicitados:
 
 1) PARA ACCEDER AL PANEL DE ADMINISTRACIÓN
 
