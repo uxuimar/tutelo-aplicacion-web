@@ -1,0 +1,65 @@
+:root{
+  --admin-surface: #0b1020;
+  --admin-text: #232738;
+  --admin-container: 1200px;
+}
+
+.admin-template{
+  background: #eef2ff ;
+  color: #eef2ff;
+  min-height: 100dvh;
+}
+
+.admin-color{
+  background: #eef2ff ;
+  color: #232738;
+  min-height: 94dvh;
+}
+
+
+.admin-template h2:first-child {
+  color: var(--admin-text);
+}
+
+
+
+/* Panel */
+.admin-main{
+  max-width: var(--admin-container);
+  margin: 0 auto;
+  padding: 20px 24px;
+
+  display: grid;
+  gap: 16px;
+
+  
+  align-content: start;
+}
+
+.admin-topbar{
+  width: 100%;
+  padding: 14px 22px;
+  background: transparent; /* o #1f2a6d si querés barra visible */
+}
+
+.admin-topbar__right{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-topbar__left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.admin-welcome{
+  color: #232738; /* si el fondo es oscuro */
+  font-size: 16px;
+  font-weight: 300;
+}
+
+
+

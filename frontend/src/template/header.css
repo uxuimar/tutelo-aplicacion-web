@@ -1,0 +1,135 @@
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  background: #ffff;
+  border-bottom: 1px solid #e8e8e8;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-header__brand {
+  text-decoration: none;
+  display: flex;           /* mejor para imagen */
+  align-items: center;
+}
+
+/* logo png */
+.app-header__logo {
+  height: 30px;            /* ajustá según tu diseño */
+  width: auto;
+  display: block;
+}
+
+.app-header__title {
+  font-weight: 800;
+}
+
+.app-header__subtitle {
+  font-size: 12px;
+  color: #0b0d12;
+}
+
+.app-header__right {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btn {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn--primary {
+  background: #0071fb;
+  color: #e8e8e8;
+  border: none;
+}
+
+.btn--secondary {
+  background: transparent;
+  color: #0b0d12;
+  border: 1px solid #2b3150;
+}
+
+/* responsive */
+@media (max-width: 520px) {
+  .app-header {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .app-header__right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+.btn--outline {
+  background: transparent;
+  border: 1px solid #0071fb;
+  color: #0071fb;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.btn--outline:hover {
+  background: #0071fb;
+  color: #ffffff;
+}
+
+.header-ctas {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-ctas--admin {
+  padding-right: 12px;
+  margin-right: 12px;
+  border-right: 1px solid rgba(255,255,255,.15);
+}
+
+.admin-status {
+  font-size: 16px;
+  color: #0071fb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px;
+}
+
+.admin-status-link{
+  color: #ffffff;
+  background-color: #42C478;
+  font-size: 14px;
+  opacity: .9;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: #42C478 1px solid;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  transition: 0.25s;
+
+  
+}
+
+.admin-status-link:hover{
+  opacity: 1;
+  background-color: #2b3150;
+  border: #2b3150 1px solid;
+  
+}
