@@ -177,7 +177,7 @@ export default function AdminHotelsPage() {
 
       const results = await Promise.allSettled(
         targets.map(async (h) => {
-          const res = await api.get(`/hotels/${h.id}`); // ✅ ESTE ES TU ENDPOINT REAL
+          const res = await api.get(`/hotels/${h.id}`); // Este es el endpoint
           return { id: h.id, urls: normalizeImageUrls(res.data) };
         })
       );
