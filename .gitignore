@@ -1,16 +1,23 @@
+# IDE / tooling
 .vscode/
 .idea/
 backend/.idea/
+.DS_Store
+*.iml
+
+# Build
 backend/target/
-backend/data/
-backend/uploads/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
-.DS_Store
-*.iml
+
+# DB local (H2)
+backend/data/
 *.mv.db
 *.lock.db
 *.trace.db
+
+# Env
 .env
 *.env
+
