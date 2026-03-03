@@ -40,6 +40,8 @@
   width: 100%;
   padding: 14px 22px;
   background: transparent; /* o #1f2a6d si querés barra visible */
+  max-width: var(--admin-container);
+  margin: 0 auto;
 }
 
 .admin-topbar__right{
@@ -59,6 +61,37 @@
   color: #232738; /* si el fondo es oscuro */
   font-size: 16px;
   font-weight: 300;
+}
+
+
+.admin-welcome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.role-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.role-super {
+  background: linear-gradient(135deg, #f7c948, #fadb5f);
+  color: #222;
+}
+
+.role-admin {
+  background: #1f2937;
+  color: #fff;
+}
+
+.role-guest {
+  background: #e5e7eb;
+  color: #444;
 }
 
 

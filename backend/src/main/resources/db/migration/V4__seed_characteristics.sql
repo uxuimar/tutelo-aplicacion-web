@@ -1,0 +1,18 @@
+MERGE INTO characteristics (name, icon, type) KEY(name) VALUES
+    ('Cocina', 'kitchen', 'BOOLEAN'),
+    ('Heladera', 'fridge', 'BOOLEAN'),
+    ('Televisor', 'tv', 'BOOLEAN'),
+    ('Aire acondicionado', 'ac', 'BOOLEAN'),
+    ('Apto mascotas', 'pets', 'BOOLEAN'),
+    ('Calefacción', 'heater', 'BOOLEAN'),
+    ('Estacionamiento gratuito', 'parking_free', 'BOOLEAN'),
+    ('Estacionamiento privado', 'parking_private', 'BOOLEAN'),
+    ('Pileta', 'pool', 'BOOLEAN'),
+    ('Wifi', 'wifi', 'BOOLEAN'),
+    ('Desayuno', 'breakfast', 'BOOLEAN'),
+    ('Balcón', 'balcony', 'BOOLEAN'),
+    ('Lavaropas', 'washer', 'BOOLEAN'),
+    ('Servicio de lavandería', 'laundry', 'BOOLEAN'),
+    ('Habitaciones', 'rooms', 'NUMBER'),
+    ('Baño', 'bathroom', 'NUMBER'),
+    ('Ambientes', 'spaces', 'NUMBER');

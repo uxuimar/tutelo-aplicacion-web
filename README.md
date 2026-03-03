@@ -17,11 +17,14 @@ Figma:
 https://www.figma.com/deck/abotGbDQUObXGDBFOP83H6/Tutelo---Desaf%C3%ADo-Profesional?node-id=1-36&t=sTBGcbJXLUuma8Qk-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1
 
 .ppt (Por las dudas)
-https://docs.google.com/presentation/d/12dschhgjWK8gArTP_ls6hV-YVbEl9TVi/edit?usp=sharing&ouid=105469249204808837408&rtpof=true&sd=true
+https://docs.google.com/presentation/d/12dschhgjWK8gArTP_ls6hV-YVbEl9TVi/edit?usp=drive_link&ouid=105469249204808837408&rtpof=true&sd=true
 
 
 3) PLAN DE PRUEBAS Y EJECUCIÓN:
 
+Sprint 1:
 https://docs.google.com/spreadsheets/d/1qkW05tiNnnQ7fxU3142-jHuuh0eA6YfK/edit?usp=sharing&ouid=105469249204808837408&rtpof=true&sd=true
 
+Sprint 2:
+https://docs.google.com/spreadsheets/d/1-5j-87uvwtsUZT6F5uDxvJd-GuJQ_WlI/edit?usp=drive_link&ouid=105469249204808837408&rtpof=true&sd=true
 

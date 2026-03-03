@@ -1,0 +1,16 @@
+.vscode/
+.idea/
+backend/.idea/
+backend/target/
+backend/data/
+backend/uploads/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+.DS_Store
+*.iml
+*.mv.db
+*.lock.db
+*.trace.db
+.env
+*.env

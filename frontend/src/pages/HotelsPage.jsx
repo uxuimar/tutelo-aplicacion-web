@@ -1,14 +1,42 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/api";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
+/**
+ * Helpers para leer categorías desde el objeto hotel,
+ * backend devuelve:
+ * categories: [{ id, name, ... }]
+ */
+function readHotelCategories(h) {
+  const raw = h?.categories ?? [];
+  if (!Array.isArray(raw)) return [];
 
-const lodgingTypes = [
-  { id: "hotels", title: "Hoteles", subtitle: "807.105 hoteles", img: "https://picsum.photos/seed/hotel/640/360" },
-  { id: "hostels", title: "Hostels", subtitle: "807.105 hoteles", img: "https://picsum.photos/seed/hostel/640/360" },
-  { id: "apartments", title: "Departamentos", subtitle: "807.105 hoteles", img: "https://picsum.photos/seed/apartment/640/360" },
-  { id: "bnb", title: "Bed and breakfast", subtitle: "807.105 hoteles", img: "https://picsum.photos/seed/bnb/640/360" },
-];
+  return raw
+    .map((c) => ({
+      id: c?.id,
+      name: c?.name,
+    }))
+    .filter((x) => x.id && x.name);
+}
+
+/**
+ * Convierte imageUrl relativo (ej: /uploads/...) a absoluto (http://localhost:8080/uploads/...)
+ * Mantiene compatibilidad si api.baseURL no es http.
+ */
+const toAbsoluteImgSrc = (maybeRelative) => {
+  if (!maybeRelative) return "";
+  if (/^(https?:)?\/\//i.test(maybeRelative) || /^(data:|blob:)/i.test(maybeRelative)) return maybeRelative;
+
+  const base = api?.defaults?.baseURL || "";
+  if (base.startsWith("http")) {
+    const backendOrigin = new URL(base).origin;
+    return new URL(maybeRelative, backendOrigin).toString();
+  }
+
+  // fallback local
+  return new URL(maybeRelative, "http://localhost:8080").toString();
+};
 
 function MiniCarousel({ name, imageUrls }) {
   const base = "http://localhost:8080";
@@ -84,7 +112,7 @@ export default function HotelsPage() {
   const [dates, setDates] = useState("");
   const [guests, setGuests] = useState(2);
 
-  // paginación general 
+  // paginación general
   const [page, setPage] = useState(1);
 
   // paginación SOLO para recomendaciones
@@ -95,9 +123,15 @@ export default function HotelsPage() {
   const [loadingHotels, setLoadingHotels] = useState(true);
   const [errorHotels, setErrorHotels] = useState("");
 
+  // ✅ categorías reales desde /api/categories (con imageUrl)
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [errorCategories, setErrorCategories] = useState("");
+
   // accesibilidad: foco al cambiar página de recomendaciones
   const recoHeadingRef = useRef(null);
 
+  // cargar hoteles
   useEffect(() => {
     let mounted = true;
 
@@ -106,7 +140,7 @@ export default function HotelsPage() {
       setErrorHotels("");
 
       try {
-        const res = await api.get("/hotels");
+        const res = await api.get("/hotels"); // => /api/hotels (vite proxy)
         if (!mounted) return;
 
         const list = Array.isArray(res.data) ? res.data : [];
@@ -132,6 +166,51 @@ export default function HotelsPage() {
       mounted = false;
     };
   }, []);
+
+  // ✅ cargar categorías (con imageUrl) desde backend
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCategories = async () => {
+      setLoadingCategories(true);
+      setErrorCategories("");
+
+      try {
+        const res = await api.get("/categories"); // => /api/categories
+        if (!mounted) return;
+
+        const list = Array.isArray(res.data) ? res.data : [];
+        setCategories(list);
+      } catch (e) {
+        if (!mounted) return;
+        setCategories([]);
+        setErrorCategories(
+          e?.response?.data ? JSON.stringify(e.response.data) : (e?.message ?? "No se pudieron cargar las categorías.")
+        );
+      } finally {
+        if (mounted) setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ✅ contador de hoteles por categoryId (para mostrar "X hoteles" bajo cada categoría)
+  const hotelsCountByCategoryId = useMemo(() => {
+    const map = new Map(); // id -> count
+    (Array.isArray(hotels) ? hotels : []).forEach((h) => {
+      const cats = readHotelCategories(h);
+      cats.forEach((c) => {
+        const prev = map.get(c.id) || 0;
+        map.set(c.id, prev + 1);
+      });
+    });
+    return map;
+  }, [hotels]);
 
   // paginación general (no usada en UI ahora, pero lo dejamos)
   const totalPages = Math.max(1, Math.ceil(hotels.length / PAGE_SIZE));
@@ -159,10 +238,27 @@ export default function HotelsPage() {
 
   const onSearch = (e) => {
     e.preventDefault();
-    setPage(1);
-    setRecoPage(1);
-    alert(`Buscar: ${destination} | Fechas: ${dates || "(sin fechas)"} | Huéspedes: ${guests}`);
+
+    const params = new URLSearchParams();
+
+    if (destination.trim()) {
+      params.set("city", destination.trim());
+    }
+
+    // opcional (si luego querés usarlos)
+    if (dates.trim()) {
+      params.set("dates", dates.trim());
+    }
+
+    if (guests) {
+      params.set("guests", guests);
+    }
+
+    navigate(`/hotels?${params.toString()}`);
   };
+
+  const categoriesStatusLoading = loadingHotels || loadingCategories;
+  const categoriesStatusError = errorHotels || errorCategories;
 
   return (
     <>
@@ -208,21 +304,69 @@ export default function HotelsPage() {
         </form>
       </section>
 
-      {/* 2) CATEGORÍAS */}
+      {/* 2) CATEGORÍAS (REALES DESDE DB + IMAGEN SUBIDA) */}
       <section className="block block--categories" aria-label="Buscar por tipo de alojamiento">
         <h2 className="section-title">Buscar por tipo de alojamiento</h2>
 
-        <div className="categories-grid">
-          {lodgingTypes.map((t) => (
-            <button key={t.id} type="button" className="category-card">
-              <img className="category-img" src={t.img} alt={t.title} />
+        {categoriesStatusLoading ? (
+          <div>Cargando categorías…</div>
+        ) : categoriesStatusError ? (
+          <div>{categoriesStatusError}</div>
+        ) : (
+          <div className="categories-grid">
+            {/* TODOS */}
+            <Link
+              to="/hotels"
+              className="category-card"
+              style={{ textDecoration: "none", color: "inherit" }}
+              aria-label="Ver todos los alojamientos"
+            >
+              <img className="category-img" src="https://picsum.photos/seed/tutelo-all/640/360" alt="Todos" />
               <div className="category-body">
-                <div className="category-title">{t.title}</div>
-                <div className="category-subtitle">{t.subtitle}</div>
+                <div className="category-title">Todos</div>
+                <div className="category-subtitle">{hotels.length} alojamientos</div>
               </div>
-            </button>
-          ))}
-        </div>
+            </Link>
+
+            {/* CATEGORÍAS DESDE DB (con imageUrl) */}
+            {categories.length === 0 ? (
+              <div style={{ padding: 8 }}>No hay categorías disponibles.</div>
+            ) : (
+              categories.map((c) => {
+                const id = c?.id;
+                const label = c?.name ?? "";
+                const img = toAbsoluteImgSrc(c?.imageUrl);
+                const count = hotelsCountByCategoryId.get(id) || 0;
+
+                const fallbackImg = `https://picsum.photos/seed/${encodeURIComponent(label || "tutelo-cat")}/640/360`;
+
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className="category-card"
+                    onClick={() => navigate(`/categories/${id}`)}
+                    aria-label={`Ver ${label}`}
+                  >
+                    <img
+                      className="category-img"
+                      src={img || fallbackImg}
+                      alt={label}
+                      onError={(e) => {
+                        // si la imagen subida no se puede cargar, usa fallback sin romper UI
+                        e.currentTarget.src = fallbackImg;
+                      }}
+                    />
+                    <div className="category-body">
+                      <div className="category-title">{label}</div>
+                      <div className="category-subtitle">{count} alojamientos</div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
       </section>
 
       {/* 3) RECOMENDACIONES (REALES) */}
@@ -273,9 +417,8 @@ export default function HotelsPage() {
               ))}
             </div>
 
-            {/* PAGINACIÓN estilo "1 2 3 … 15" con flechas */}
+            {/* PAGINACIÓN */}
             <nav className="pager" aria-label="Paginación de recomendaciones">
-              {/* Criterio: botón/enlace para ir al inicio */}
               <button
                 type="button"
                 className="pager-page pager-home"
@@ -327,13 +470,10 @@ export default function HotelsPage() {
                 ›
               </button>
 
-              {/* contador visible opcional */}
               <span className="pager-meta">
                 {safeRecoPage} / {recoTotalPages}
               </span>
             </nav>
-
-            
           </>
         )}
       </section>

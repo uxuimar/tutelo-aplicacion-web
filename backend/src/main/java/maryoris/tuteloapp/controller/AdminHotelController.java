@@ -7,6 +7,9 @@ import maryoris.tuteloapp.service.HotelService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import maryoris.tuteloapp.dto.HotelCharacteristicValueRequest;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/admin/hotels")
 public class AdminHotelController {
@@ -32,4 +35,14 @@ public class AdminHotelController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/characteristics")
+    public HotelEntity updateCharacteristics(
+            @PathVariable Long id,
+            @Valid @RequestBody List<HotelCharacteristicValueRequest> request
+    ) {
+        return service.updateCharacteristics(id, request);
+    }
+
+
 }

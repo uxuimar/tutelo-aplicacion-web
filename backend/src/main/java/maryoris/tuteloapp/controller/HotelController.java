@@ -2,12 +2,15 @@ package maryoris.tuteloapp.controller;
 
 import jakarta.validation.Valid;
 import maryoris.tuteloapp.dto.HotelRequest;
+import maryoris.tuteloapp.dto.UpdateHotelCategoriesRequest;
 import maryoris.tuteloapp.entity.HotelEntity;
 import maryoris.tuteloapp.repository.HotelRepository;
 import maryoris.tuteloapp.service.HotelService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import maryoris.tuteloapp.dto.HotelPublicResponse;
 
 import java.nio.file.*;
 import java.util.*;
@@ -45,8 +48,8 @@ public class HotelController {
     }
 
     @GetMapping
-    public List<HotelEntity> list() {
-        return service.list();
+    public List<HotelPublicResponse> list() {
+        return service.listPublic();
     }
 
     @GetMapping("/{id}")
@@ -130,5 +133,13 @@ public class HotelController {
         service.deleteImageByUrl(id, decoded);
         return ResponseEntity.noContent().build();
     }
-}
 
+    // Asignar categorias a un hotel existente
+    @PatchMapping("/{id}/categories")
+    public HotelEntity updateCategories(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateHotelCategoriesRequest req
+    ) {
+        return service.updateCategories(id, req.getCategoryIds());
+    }
+}

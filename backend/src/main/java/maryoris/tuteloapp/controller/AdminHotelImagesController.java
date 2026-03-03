@@ -20,7 +20,7 @@ public class AdminHotelImagesController {
         this.hotelRepository = hotelRepository;
     }
 
-    // ✅ Upload multiple images (ADMIN)
+    // Upload multiple images (ADMIN)
     @PostMapping("/{id}/images")
     public ResponseEntity<?> uploadHotelImages(
             @PathVariable Long id,
@@ -38,7 +38,7 @@ public class AdminHotelImagesController {
 
             var hotel = hotelOpt.get();
 
-            // ✅ Ruta absoluta al directorio uploads
+            // Ruta absoluta al directorio uploads
             Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads");
             Files.createDirectories(uploadDir);
 
@@ -80,7 +80,7 @@ public class AdminHotelImagesController {
         }
     }
 
-    // ✅ Delete 1 image (ADMIN)
+    // Delete 1 image (ADMIN)
     // Ruta: DELETE /api/admin/hotels/{id}/images?url=/uploads/xxx.jpg
     @DeleteMapping("/{id}/images")
     public ResponseEntity<?> deleteHotelImage(

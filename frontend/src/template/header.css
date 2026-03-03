@@ -54,10 +54,20 @@
   border: none;
 }
 
+.btn--primary:hover {
+  background: #0b0d12;
+  transition: 0.25s;
+
+}
+
 .btn--secondary {
   background: transparent;
   color: #0b0d12;
   border: 1px solid #2b3150;
+}
+
+.btn--secondary:hover {
+ transition: 0.25s;
 }
 
 /* responsive */
@@ -132,4 +142,132 @@
   background-color: #2b3150;
   border: #2b3150 1px solid;
   
+}
+
+/* Menú de usuario */
+
+.user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: #eef2ff;
+  color: #0071fb;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.user-chip:hover {
+  background: rgba(0,0,0,0.18);
+}
+
+.user-chip__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e; /* puntito verde */
+  display: inline-block;
+}
+
+.user-chip__name {
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-chip__caret {
+  opacity: 0.9;
+  font-size: 12px;
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 220px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+  padding: 8px;
+  z-index: 9999;
+}
+
+.user-dropdown__item {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 10px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  color: #0b0d12;
+}
+
+
+
+.user-dropdown__sep {
+  height: 1px;
+  background: rgba(0,0,0,0.08);
+  margin: 6px 0;
+}
+
+.user-dropdown__item--danger {
+  color: #FF5C5C;
+}
+
+.user-dropdown__item--danger:hover {
+  background: rgba(185, 28, 28, 0.08);
+}
+
+.user-avatar{
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 12px;
+  color: #0b0d12;
+  background: rgba(255,255,255,0.85);
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.user-avatar__online{
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #22c55e;
+  border: 2px solid rgba(0,0,0,0.15);
+}
+
+.user-avatar{
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 12px;
+  color: #0b0d12;
+  background: rgba(255,255,255,0.85);
+  flex: 0 0 auto;
 }

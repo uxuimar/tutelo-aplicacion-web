@@ -31,7 +31,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
 
-        // opcional (si querés evitar problemas al servir imágenes desde el backend)
+        // opcional (si quiero evitar problemas al servir imágenes desde el backend)
         registry.addMapping("/uploads/**")
                 .allowedOrigins(
                         "http://localhost:5183",

@@ -1,45 +1,70 @@
 package maryoris.tuteloapp.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Entity
-@Table(
-        name = "hotels",
-        uniqueConstraints = @UniqueConstraint(name = "uk_hotels_name", columnNames = "name")
-)
+@Table(name = "hotels")
 public class HotelEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
     @Column(nullable = false)
     private String name;
 
-    @NotBlank
     @Column(nullable = false)
     private String city;
 
-    @NotBlank
     @Column(nullable = false)
     private String address;
 
+    @Column(length = 2000)
     private String description;
 
+    // =============================
+    // CATEGORÍAS
+    // =============================
+    @ManyToMany
+    @JoinTable(
+            name = "hotel_categories",
+            joinColumns = @JoinColumn(name = "hotel_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<CategoryEntity> categories = new HashSet<>();
+
+    // =============================
+    // IMÁGENES
+    // =============================
     @ElementCollection
-    @CollectionTable(name = "hotel_images", joinColumns = @JoinColumn(name = "hotel_id"))
+    @CollectionTable(
+            name = "hotel_images",
+            joinColumns = @JoinColumn(name = "hotel_id")
+    )
     @Column(name = "image_url")
     private List<String> imageUrls = new ArrayList<>();
 
+    // =============================
+    // CARACTERÍSTICAS
+    // =============================
+    @OneToMany(
+            mappedBy = "hotel",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<HotelCharacteristicEntity> characteristics = new ArrayList<>();
+
+    // =============================
+    // CONSTRUCTOR
+    // =============================
     public HotelEntity() {}
 
+    // =============================
+    // GETTERS Y SETTERS
+    // =============================
+
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -53,6 +78,12 @@ public class HotelEntity {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
+    public Set<CategoryEntity> getCategories() { return categories; }
+    public void setCategories(Set<CategoryEntity> categories) { this.categories = categories; }
+
     public List<String> getImageUrls() { return imageUrls; }
     public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+
+    public List<HotelCharacteristicEntity> getCharacteristics() { return characteristics; }
+    public void setCharacteristics(List<HotelCharacteristicEntity> characteristics) { this.characteristics = characteristics; }
 }
