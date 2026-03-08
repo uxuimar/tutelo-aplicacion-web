@@ -10,20 +10,12 @@ Administración/admin:
 maryorism@gmail.com
 Contraseña: 12345678
 
-Administrado/Invitado: 
-lola@gmail.com
-Contraseña: 12345678
-
 2) GESTION DE USUARIOS ADMINISTRADORES
 H2 Console: 
 http://localhost:8080/h2-console
 jdbc:h2:file:./data/tuteloapp
 User Name: sa | Password: vacio
 
-3) INGRESO DE USUARIO AUTENTICADO
-Usuario autenticado:
-usuarioreservando@gmail.com
-Contraseña: 12345678
 
 4) DOCUMENTACIÓN/ BOTÁCORA:
 Figma: 
