@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
@@ -24,7 +25,11 @@ public class SecurityConfig {
             DaoAuthenticationProvider daoAuthenticationProvider
     ) throws Exception {
 
-        //  EntryPoint para /api/**: devuelve 401 JSON SIN WWW-Authenticate => evita popup del navegador
+        /*
+         * CORRECCIÓN VERÓNICA - Punto 1: Seguridad y control de acceso
+         * Para rutas /api/**, cuando el usuario NO está autenticado,
+         * se devuelve 401 Unauthorized en JSON y se evita el popup del navegador.
+         */
         AuthenticationEntryPoint apiEntryPoint = (HttpServletRequest request,
                                                   HttpServletResponse response,
                                                   org.springframework.security.core.AuthenticationException authException) -> {
@@ -33,7 +38,18 @@ public class SecurityConfig {
             response.getWriter().write("{\"error\":\"unauthorized\"}");
         };
 
-        //  Matcher: aplica solo a rutas /api/**
+        /*
+         * CORRECCIÓN VERÓNICA - Punto 1: Seguridad y control de acceso
+         * Para rutas /api/**, cuando el usuario SÍ está autenticado
+         * pero no tiene permisos suficientes, se devuelve 403 Forbidden.
+         */
+        AccessDeniedHandler apiAccessDeniedHandler = (request, response, accessDeniedException) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.getWriter().write("{\"error\":\"forbidden\"}");
+        };
+
+        // Aplica manejo especial solo a rutas /api/**
         RequestMatcher apiMatcher = request -> {
             String uri = request.getRequestURI();
             return uri != null && uri.startsWith("/api/");
@@ -45,8 +61,15 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .authenticationProvider(daoAuthenticationProvider)
 
-                //  CLAVE: para /api/** usa entrypoint sin Basic-challenge (sin popup)
-                .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(apiEntryPoint, apiMatcher))
+                /*
+                 * CORRECCIÓN VERÓNICA - Punto 1: Seguridad y control de acceso
+                 * Se definen respuestas HTTP correctas para autenticación/autorización:
+                 * 401 cuando falta autenticación, 403 cuando falta permiso.
+                 */
+                .exceptionHandling(ex -> ex
+                        .defaultAuthenticationEntryPointFor(apiEntryPoint, apiMatcher)
+                        .defaultAccessDeniedHandlerFor(apiAccessDeniedHandler, apiMatcher)
+                )
 
                 .authorizeHttpRequests(auth -> auth
 
@@ -58,17 +81,17 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/api/cities/**").permitAll()
 
-                        //  AUTH público (login/register)
+                        // AUTH público (login/register)
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        //  GET públicos (lectura)
+                        // GET públicos (lectura)
                         .requestMatchers(HttpMethod.GET, "/api/hotels/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/characteristics/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
                         // =========================
-                        // WRITE CATEGORIES (NO TOCAMOS ROLES)
+                        // WRITE CATEGORIES
                         // =========================
 
                         .requestMatchers(HttpMethod.POST, "/api/categories/**")
@@ -96,14 +119,17 @@ public class SecurityConfig {
                         // ADMIN
                         // =========================
 
+                        /*
+                         * CORRECCIÓN VERÓNICA - Punto 1: Seguridad y control de acceso
+                         * Todo recurso administrativo queda restringido a ADMIN/SUPER_ADMIN.
+                         */
                         .requestMatchers("/api/admin/**")
                         .hasAnyRole("ADMIN", "SUPER_ADMIN")
 
                         .anyRequest().authenticated()
                 )
 
-                //  lo deje: sigue funcionando Basic (Postman/axios),
-                // pero /api/** ya no dispara el popup del navegador
+                // Se mantiene Basic Auth para Postman/frontend
                 .httpBasic();
 
         return http.build();

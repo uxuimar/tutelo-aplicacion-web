@@ -2,8 +2,11 @@ import { useState } from "react";
 import { api } from "../api/api";
 import { useNavigate, Link } from "react-router-dom";
 
-
 const USER_STORAGE_KEY = "tutelo_user";
+
+function buildBasicAuth(email, password) {
+  return `Basic ${btoa(`${email}:${password}`)}`;
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -21,43 +24,81 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
 
-    if (!form.email?.trim() || !form.password) {
+    const email = form.email?.trim();
+    const password = form.password;
+
+    if (!email || !password) {
       setError("Email y contraseña son obligatorios.");
       return;
     }
 
     setLoading(true);
+
     try {
-      const res = await api.post("/auth/login", {
-        email: form.email.trim(),
-        password: form.password,
+      /*
+        CORRECCIÓN - Punto 2: Problemas en autenticación
+        Se deja de usar el login manual POST /auth/login y se valida
+        la sesión contra Spring Security mediante Basic Auth + /api/me.
+      */
+      const authHeader = buildBasicAuth(email, password);
+
+      /*
+        CORRECCIÓN - Punto 3: Recomendaciones sobre la autenticación
+        El login de usuario común deja de usar POST /api/auth/login y pasa a validar
+        la sesión contra Spring Security mediante Authorization + GET /api/me,
+        igual que el flujo administrativo.
+      */
+      const { data } = await api.get("/me", {
+        headers: {
+          Authorization: authHeader,
+        },
       });
 
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(res.data));
-        window.dispatchEvent(new Event("auth_changed"));
-        navigate("/");
+      /*
+        CORRECCIÓN USER STORY - Identificación del usuario
+        La sesión local del usuario debe conservar nombre, apellido y email
+        devueltos por /api/me para cumplir el criterio de aceptación de mostrar
+        la información personal del usuario luego del inicio de sesión.
+      */
+      const safeUserSession = {
+        email: data?.email || email,
+        roles: Array.isArray(data?.roles) ? data.roles : [],
+        firstName: data?.firstName || "",
+        lastName: data?.lastName || "",
+        authenticated: Boolean(data?.authenticated),
+      };
+
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(safeUserSession));
+      window.dispatchEvent(new Event("auth_changed"));
+      navigate("/");
     } catch (e) {
       const status = e?.response?.status;
-      if (status === 401) setError("Email o contraseña incorrectos.");
-      else if (status === 400) setError("Revisá los datos ingresados.");
-      else setError("Error inesperado al iniciar sesión.");
+
+      /*
+        CORRECCIÓN - Punto 2: Problemas en autenticación
+        Se alinean los mensajes con el comportamiento real de Spring Security.
+      */
+      if (status === 401) {
+        setError("Email o contraseña incorrectos.");
+      } else if (status === 403) {
+        setError("No tienes permisos para acceder.");
+      } else {
+        setError("Error inesperado al iniciar sesión.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-
-    
-    
     <div style={container}>
       <div style={card}>
-
         <div style={{ marginBottom: 16 }}>
-            <Link to="/" style={{ color: "#0071fb", fontWeight: 600 }}>
+          <Link to="/" style={{ color: "#0071fb", fontWeight: 600 }}>
             ← Ir al inicio
-            </Link>
+          </Link>
         </div>
+
         <h2 style={{ marginTop: 0, color: "#0b0d12" }}>Iniciar sesión</h2>
 
         {error && <div style={{ ...errorStyle }}>{error}</div>}
@@ -70,6 +111,7 @@ export default function LoginPage() {
             value={form.email}
             onChange={onChange}
             style={input}
+            autoComplete="username"
           />
 
           <input
@@ -79,6 +121,7 @@ export default function LoginPage() {
             value={form.password}
             onChange={onChange}
             style={input}
+            autoComplete="current-password"
           />
 
           <button type="submit" style={btn} disabled={loading}>
@@ -86,8 +129,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: 12, color: "#0b0d12"  }}>
-          ¿No tenés cuenta aún? <Link style={{ color: "#0071fb"  }} to="/register"><b>Regístrate</b></Link>
+        <div style={{ marginTop: 12, color: "#0b0d12" }}>
+          ¿No tenés cuenta aún?{" "}
+          <Link style={{ color: "#0071fb" }} to="/register">
+            <b>Regístrate</b>
+          </Link>
         </div>
       </div>
     </div>
@@ -98,7 +144,6 @@ const container = {
   minHeight: "80vh",
   display: "grid",
   placeItems: "center",
-
 };
 
 const card = {
@@ -114,8 +159,8 @@ const input = {
   borderRadius: 10,
   border: "1px solid #ccc",
   outline: "none",
-   background: "#f9f9f9",
-  color: "#0b0d12"
+  background: "#f9f9f9",
+  color: "#0b0d12",
 };
 
 const btn = {
@@ -134,5 +179,4 @@ const errorStyle = {
   padding: 10,
   borderRadius: 10,
   marginBottom: 12,
-
 };

@@ -2,36 +2,21 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./Header.css";
 import logo from "../assets/logo.png";
 import { useEffect, useRef, useState } from "react";
+import { useAdminAuth } from "../context/AdminAuthContext";
 
-const STORAGE_KEY = "admin_basic"; // administración
 const USER_STORAGE_KEY = "tutelo_user"; // usuario
 
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAdminAuthenticated } = useAdminAuth();
 
-  // Detectar si estamos en rutas admin
   const path = location.pathname || "/";
   const isAuthRoute = path === "/login" || path === "/register";
   const firstSegment = path.split("/")[1] || "";
-  const isAdminRoute = firstSegment === "admin" || firstSegment === "administracion";
+  const isAdminRoute =
+    firstSegment === "admin" || firstSegment === "administracion";
 
-  // Sesión admin (según tu sistema actual)
-  let isAdmin = false;
-  let adminUser = null;
-
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const s = JSON.parse(saved);
-      if (s?.user && s?.pass) {
-        isAdmin = true;
-        adminUser = s.user;
-      }
-    }
-  } catch {}
-
-  // Sesión usuario (registro/login)
   const [user, setUser] = useState(() => {
     try {
       const raw = localStorage.getItem(USER_STORAGE_KEY);
@@ -41,11 +26,9 @@ export default function Header() {
     }
   });
 
-  // Dropdown usuario
   const [openUserMenu, setOpenUserMenu] = useState(false);
   const userMenuRef = useRef(null);
 
-  // Sync: si login/logout ocurre, reflejarlo en header sin recargar
   useEffect(() => {
     const syncUser = () => {
       try {
@@ -65,7 +48,6 @@ export default function Header() {
     };
   }, []);
 
-  // Cerrar dropdown al click afuera + ESC
   useEffect(() => {
     if (!openUserMenu) return;
 
@@ -89,20 +71,19 @@ export default function Header() {
 
   const logoutUser = () => {
     localStorage.removeItem(USER_STORAGE_KEY);
-
-      // Notificar a toda la app que cambió el estado de autenticación
-      window.dispatchEvent(new Event("auth_changed"));
-
+    window.dispatchEvent(new Event("auth_changed"));
     setUser(null);
     setOpenUserMenu(false);
     navigate("/");
   };
 
-  const fullName = user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() : "";
+  const fullName = user
+    ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
+    : "";
 
   const getInitials = (u) => {
-  const first = (u?.firstName || "").trim();
-  const last = (u?.lastName || "").trim();
+    const first = (u?.firstName || "").trim();
+    const last = (u?.lastName || "").trim();
     return ((first[0] || "") + (last[0] || "")).toUpperCase() || "U";
   };
 
@@ -116,21 +97,23 @@ export default function Header() {
       </div>
 
       <div className="app-header__right">
-        {/* Indicador clickeable para volver a admin cuando hay sesión */}
-        {isAdmin && !isAdminRoute && (
+        {/*
+          CORRECCIÓN VERÓNICA - Punto 2: Problemas en autenticación
+          El estado admin ya no depende de localStorage ni admin_basic,
+          sino del contexto admin en memoria.
+        */}
+        {isAdminAuthenticated && !isAdminRoute && (
           <Link to="/administracion" className="admin-status-link">
             Volver al panel →
           </Link>
         )}
 
-        {/* CTA ADMIN (solo fuera de admin) */}
-        {!isAdminRoute && !isAdmin && !isAuthRoute && (
-          <Link to="/administracion" className="btn btn--outline">
-            Administrar alojamientos
+        {!isAdminRoute && !isAdminAuthenticated && !isAuthRoute && (
+          <Link to="/administracion/login" className="btn btn--outline">
+            Acceso administración
           </Link>
         )}
 
-        {/* Usuario: si NO está logueado -> register/login (pero oculto en /login y /register) */}
         {!user && !isAuthRoute ? (
           <>
             <Link to="/register" className="btn btn--secondary">
@@ -142,7 +125,6 @@ export default function Header() {
             </Link>
           </>
         ) : user ? (
-          // Usuario logueado: dropdown (distinto al admin)
           <div className="user-menu" ref={userMenuRef}>
             <button
               type="button"
@@ -155,7 +137,9 @@ export default function Header() {
                 {getInitials(user)}
               </span>
               <span className="user-chip__name">{fullName || "Mi cuenta"}</span>
-              <span className="user-chip__caret" aria-hidden="true">▾</span>
+              <span className="user-chip__caret" aria-hidden="true">
+                ▾
+              </span>
             </button>
 
             {openUserMenu && (

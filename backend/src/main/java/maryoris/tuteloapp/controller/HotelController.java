@@ -1,19 +1,17 @@
 package maryoris.tuteloapp.controller;
 
 import jakarta.validation.Valid;
+import maryoris.tuteloapp.dto.HotelPublicResponse;
 import maryoris.tuteloapp.dto.HotelRequest;
 import maryoris.tuteloapp.dto.UpdateHotelCategoriesRequest;
 import maryoris.tuteloapp.entity.HotelEntity;
-import maryoris.tuteloapp.repository.HotelRepository;
 import maryoris.tuteloapp.service.HotelService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import maryoris.tuteloapp.dto.HotelPublicResponse;
-
-import java.nio.file.*;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 @CrossOrigin(
         origins = {
@@ -35,11 +33,9 @@ import java.util.*;
 public class HotelController {
 
     private final HotelService service;
-    private final HotelRepository hotelRepository;
 
-    public HotelController(HotelService service, HotelRepository hotelRepository) {
+    public HotelController(HotelService service) {
         this.service = service;
-        this.hotelRepository = hotelRepository;
     }
 
     @PostMapping
@@ -54,9 +50,7 @@ public class HotelController {
 
     @GetMapping("/{id}")
     public ResponseEntity<HotelEntity> getById(@PathVariable Long id) {
-        return hotelRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(service.getById(id));
     }
 
     @DeleteMapping("/{id}")
@@ -64,7 +58,6 @@ public class HotelController {
         service.delete(id);
     }
 
-    // UPDATE
     @PutMapping("/{id}")
     public ResponseEntity<HotelEntity> updateHotel(
             @PathVariable Long id,
@@ -74,67 +67,34 @@ public class HotelController {
         return ResponseEntity.ok(updated);
     }
 
-    // Upload multiple images
+    /*
+     * CORRECCIÓN - Punto 5: Arquitectura del HotelController
+     * El controller deja de crear directorios, copiar archivos o generar UUIDs.
+     * Solo recibe la request HTTP y delega el almacenamiento de imágenes al service.
+     */
     @PostMapping("/{id}/images")
     public ResponseEntity<?> uploadHotelImages(
             @PathVariable Long id,
             @RequestParam("files") List<MultipartFile> files
-    ) throws Exception {
-
-        if (files == null || files.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "No se enviaron archivos"));
-        }
-
-        var hotelOpt = hotelRepository.findById(id);
-        if (hotelOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        var hotel = hotelOpt.get();
-
-        Path uploadDir = Paths.get("uploads");
-        Files.createDirectories(uploadDir);
-
-        List<String> urls = new ArrayList<>();
-
-        for (MultipartFile file : files) {
-            if (file.isEmpty()) continue;
-
-            String original = Optional.ofNullable(file.getOriginalFilename()).orElse("file");
-            String ext = "";
-            int dot = original.lastIndexOf('.');
-            if (dot >= 0) ext = original.substring(dot);
-
-            String filename = UUID.randomUUID() + ext;
-            Path target = uploadDir.resolve(filename);
-
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-
-            urls.add("/uploads/" + filename);
-        }
-
-        if (hotel.getImageUrls() == null) {
-            hotel.setImageUrls(new ArrayList<>());
-        }
-        hotel.getImageUrls().addAll(urls);
-        hotelRepository.save(hotel);
-
+    ) {
+        List<String> urls = service.uploadImages(id, files);
         return ResponseEntity.ok(Map.of("imageUrls", urls));
     }
 
-    // DELETE imagen (ADMIN)
-    // Ruta REAL: DELETE /api/hotels/admin/hotels/{id}/images?url=...
+    /*
+     * CORRECCIÓN - Punto 5: Arquitectura del HotelController
+     * El controller delega la eliminación de imágenes al service y se mantiene
+     * enfocado únicamente en la capa HTTP.
+     */
     @DeleteMapping("/admin/hotels/{id}/images")
     public ResponseEntity<Void> deleteHotelImage(
             @PathVariable Long id,
             @RequestParam String url
     ) {
-        String decoded = java.net.URLDecoder.decode(url, java.nio.charset.StandardCharsets.UTF_8);
-        service.deleteImageByUrl(id, decoded);
+        service.deleteImageByUrl(id, url);
         return ResponseEntity.noContent().build();
     }
 
-    // Asignar categorias a un hotel existente
     @PatchMapping("/{id}/categories")
     public HotelEntity updateCategories(
             @PathVariable Long id,

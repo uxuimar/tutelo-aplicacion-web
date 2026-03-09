@@ -1,29 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/api";
+import { useAdminAuth } from "../context/AdminAuthContext";
 
 const initialForm = { name: "", city: "", address: "", description: "" };
 
-// ✅ Categorías: SIN imageUrl (solo archivo local)
+//  Categorías: SIN imageUrl (solo archivo local)
 const initialCategoryForm = { name: "", slug: "", description: "" };
-
-const STORAGE_KEY = "admin_basic";
-
-const adminAuthHeader = () => {
-  let user = "admin";
-  let pass = "admin123";
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed?.user) user = parsed.user;
-      if (parsed?.pass) pass = parsed.pass;
-    }
-  } catch {}
-
-  const token = btoa(`${user}:${pass}`);
-  return { Authorization: `Basic ${token}` };
-};
 
 const normalizeImageUrls = (data) => {
   if (!data) return [];
@@ -83,6 +65,8 @@ const extractHotelCharacteristicState = (hotelDetail) => {
 };
 
 export default function AdminHotelsPage(props) {
+  const { adminAuthHeader } = useAdminAuth();
+
   const canEditFromTemplate = props?.canEdit;
   const isAdminFromTemplate = props?.isAdmin;
   const isSuperAdminFromTemplate = props?.isSuperAdmin;
@@ -90,7 +74,7 @@ export default function AdminHotelsPage(props) {
   const createModalFormRef = useRef(null);
   const editModalFormRef = useRef(null);
 
-  // ✅ NUEVO: refs para forms de categorías (porque los botones están en el footer fuera del <form>)
+  //  NUEVO: refs para forms de categorías (porque los botones están en el footer fuera del <form>)
   const categoryCreateFormRef = useRef(null);
   const categoryEditFormRef = useRef(null);
 
@@ -120,19 +104,19 @@ export default function AdminHotelsPage(props) {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [editCategoryIds, setEditCategoryIds] = useState([]);
 
-  // ✅ ADMIN categorías
+  //  ADMIN categorías
   const [showCategoriesAdmin, setShowCategoriesAdmin] = useState(false);
   const [categoryForm, setCategoryForm] = useState(initialCategoryForm);
   const [categorySubmitting, setCategorySubmitting] = useState(false);
 
-  // ✅ archivo local (solo 1)
+  //  archivo local (solo 1)
   const [categoryImageFile, setCategoryImageFile] = useState(null);
 
   const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false);
   const [editCategory, setEditCategory] = useState(null);
   const [categoryEditSubmitting, setCategoryEditSubmitting] = useState(false);
 
-  // ✅ archivo local (solo 1) en edición
+  //  archivo local (solo 1) en edición
   const [editCategoryImageFile, setEditCategoryImageFile] = useState(null);
 
   // características
@@ -155,7 +139,9 @@ export default function AdminHotelsPage(props) {
   const readBool = (v) => v === true || v === "true" || v === 1 || v === "1";
 
   const isSuperAdminLocal =
-    readBool(me?.isSuperAdmin) || readBool(me?.IS_SUPER_ADMIN) || readBool(me?.is_super_admin);
+    readBool(me?.isSuperAdmin) ||
+    readBool(me?.IS_SUPER_ADMIN) ||
+    readBool(me?.is_super_admin);
 
   const isEditorLocal =
     readBool(me?.isAdmin) ||
@@ -198,7 +184,6 @@ export default function AdminHotelsPage(props) {
     }
   };
 
-  // ✅ FIX: no usar prev || (evita error “pegado”) y limpiar antes de cargar
   const loadCategories = async () => {
     setError("");
     try {
@@ -233,35 +218,26 @@ export default function AdminHotelsPage(props) {
 
   // /me
   useEffect(() => {
+    /*
+      CORRECCIÓN - Punto 2: Problemas en autenticación
+      AdminHotelsPage deja de depender del esquema viejo admin_basic en localStorage.
+      Los permisos del panel vienen desde AdminTemplate por props seguras
+      y desde el contexto admin en memoria.
+    */
     if (typeof canEditFromTemplate === "boolean") {
       setMeLoading(false);
-      setMe((prev) =>
-        prev ?? { isAdmin: !!isAdminFromTemplate, isSuperAdmin: !!isSuperAdminFromTemplate }
-      );
+      setMe({
+        isAdmin: !!isAdminFromTemplate,
+        isSuperAdmin: !!isSuperAdminFromTemplate,
+      });
       return;
     }
 
-    let cancelled = false;
-
-    const loadMe = async () => {
-      setMeLoading(true);
-      try {
-        const res = await api.get("/me", { headers: adminAuthHeader() });
-        if (!cancelled) setMe(res.data || null);
-      } catch {
-        if (!cancelled) setMe(null);
-      } finally {
-        if (!cancelled) setMeLoading(false);
-      }
-    };
-
-    loadMe();
-    return () => {
-      cancelled = true;
-    };
+    setMe(null);
+    setMeLoading(false);
   }, [canEditFromTemplate, isAdminFromTemplate, isSuperAdminFromTemplate]);
 
-  // ✅ categorías (usar loader único)
+  // categorías
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -286,21 +262,35 @@ export default function AdminHotelsPage(props) {
 
     const loadCharacteristics = async () => {
       try {
-        const res = canEdit
-          ? await api.get("/admin/characteristics", { headers: adminAuthHeader() })
-          : await api.get("/characteristics");
-        if (!cancelled) setCharacteristics(Array.isArray(res.data) ? res.data : []);
+        /*
+          CORRECCIÓN - Punto 2: Problemas en autenticación
+          La carga de características para el panel ya no usa /admin/characteristics
+          con credenciales persistidas en localStorage.
+          Se consume el endpoint público /characteristics para evitar el 401
+          que estaba rompiendo el panel admin.
+        */
+        const res = await api.get("/characteristics");
+
+        if (!cancelled) {
+          setCharacteristics(Array.isArray(res.data) ? res.data : []);
+        }
       } catch (e) {
-        const msg = e?.response?.data ? JSON.stringify(e.response.data) : e?.message ?? String(e);
-        setError((prev) => prev || `No se pudieron cargar características: ${msg}`);
+        const msg = e?.response?.data
+          ? JSON.stringify(e.response.data)
+          : e?.message ?? String(e);
+
+        if (!cancelled) {
+          setError((prev) => prev || `No se pudieron cargar características: ${msg}`);
+        }
       }
     };
 
     loadCharacteristics();
+
     return () => {
       cancelled = true;
     };
-  }, [canEdit, meLoading]);
+  }, [meLoading]);
 
   // helpers imgs
   const pickHotelImageUrls = (h) => {
@@ -429,12 +419,14 @@ export default function AdminHotelsPage(props) {
     setDeletingHotelId(deleteHotelTarget.id);
 
     try {
-      await api.delete(`/admin/hotels/${deleteHotelTarget.id}`, { headers: adminAuthHeader() });
+      await api.delete(`/admin/hotels/${deleteHotelTarget.id}`, {
+        headers: { Authorization: adminAuthHeader },
+      });
       await loadHotels();
       closeDeleteModal();
     } catch (e) {
       const status = e?.response?.status;
-      if (status === 401) setError("No autorizado (401). Revisá usuario/clave de admin.");
+      if (status === 401) setError("No autorizado (401). La sesión admin ya no es válida.");
       else if (status === 403) setError("Prohibido (403). No tenés permisos de ADMIN.");
       else {
         const msg = e?.response?.data ? JSON.stringify(e.response.data) : e?.message ?? String(e);
@@ -486,7 +478,10 @@ export default function AdminHotelsPage(props) {
     });
 
     await api.patch(`/admin/hotels/${hotelId}/characteristics`, payloadArray, {
-      headers: { ...adminAuthHeader(), "Content-Type": "application/json" },
+      headers: {
+        Authorization: adminAuthHeader,
+        "Content-Type": "application/json",
+      },
     });
   };
 
@@ -564,21 +559,26 @@ export default function AdminHotelsPage(props) {
     setSubmitting(true);
     try {
       if (hasBasicHotelChanges(editHotel, payload)) {
-        await api.put(`/admin/hotels/${editHotel.id}`, payload, { headers: adminAuthHeader() });
+        await api.put(`/admin/hotels/${editHotel.id}`, payload, {
+          headers: { Authorization: adminAuthHeader },
+        });
       }
 
       if (files.length > 0) {
         const fd = new FormData();
         files.forEach((f) => fd.append("files", f));
         await api.post(`/admin/hotels/${editHotel.id}/images`, fd, {
-          headers: { ...adminAuthHeader(), "Content-Type": "multipart/form-data" },
+          headers: {
+            Authorization: adminAuthHeader,
+            "Content-Type": "multipart/form-data",
+          },
         });
       }
 
       await api.patch(
         `/hotels/${editHotel.id}/categories`,
         { categoryIds: editCategoryIds },
-        { headers: adminAuthHeader() }
+        { headers: { Authorization: adminAuthHeader } }
       );
 
       await saveHotelCharacteristics(editHotel.id, editCharacteristicBools, editCharacteristicNums);
@@ -626,14 +626,16 @@ export default function AdminHotelsPage(props) {
 
     setSubmitting(true);
     try {
-      const created = await api.post("/admin/hotels", payload, { headers: adminAuthHeader() });
+      const created = await api.post("/admin/hotels", payload, {
+        headers: { Authorization: adminAuthHeader },
+      });
       const hotelId = created?.data?.id;
 
       if (hotelId) {
         await api.patch(
           `/hotels/${hotelId}/categories`,
           { categoryIds: selectedCategoryIds },
-          { headers: adminAuthHeader() }
+          { headers: { Authorization: adminAuthHeader } }
         );
         await saveHotelCharacteristics(hotelId, selectedCharacteristicBools, selectedCharacteristicNums);
       }
@@ -642,7 +644,10 @@ export default function AdminHotelsPage(props) {
         const fd = new FormData();
         files.forEach((f) => fd.append("files", f));
         await api.post(`/admin/hotels/${hotelId}/images`, fd, {
-          headers: { ...adminAuthHeader(), "Content-Type": "multipart/form-data" },
+          headers: {
+            Authorization: adminAuthHeader,
+            "Content-Type": "multipart/form-data",
+          },
         });
       }
 
@@ -656,7 +661,7 @@ export default function AdminHotelsPage(props) {
     } catch (e2) {
       const status = e2?.response?.status;
       const msg = e2?.response?.data ? JSON.stringify(e2.response.data) : e2?.message ?? String(e2);
-      if (status === 401) setError("No autorizado (401). Revisá usuario/clave de admin.");
+      if (status === 401) setError("No autorizado (401). La sesión admin ya no es válida.");
       else if (status === 403) setError("Prohibido (403). No tenés permisos de ADMIN.");
       else if (status === 409) setError("Ya existe un hotel con ese nombre. Usá otro nombre.");
       else if (status === 400) setError(`400 Bad Request. Detalle: ${msg}`);
@@ -673,7 +678,7 @@ export default function AdminHotelsPage(props) {
 
     try {
       await api.delete(`/admin/hotels/${hotelId}/images`, {
-        headers: adminAuthHeader(),
+        headers: { Authorization: adminAuthHeader },
         params: { url },
       });
 
@@ -691,7 +696,7 @@ export default function AdminHotelsPage(props) {
   };
 
   // ==========================
-  // ✅ ADMIN CATEGORIES: SOLO 1 FOTO LOCAL
+  // ADMIN CATEGORIES: SOLO 1 FOTO LOCAL
   // ==========================
   const onCategoryChange = (e) => {
     const { name, value } = e.target;
@@ -700,7 +705,7 @@ export default function AdminHotelsPage(props) {
 
   const onCategoryFileChange = (e) => {
     const file = (e.target.files && e.target.files[0]) || null;
-    setCategoryImageFile(file); // ✅ solo 1
+    setCategoryImageFile(file);
   };
 
   const resetCategoryForm = () => {
@@ -708,7 +713,6 @@ export default function AdminHotelsPage(props) {
     setCategoryImageFile(null);
   };
 
-  // ✅ crear con imagen (multipart) -> POST /categories/with-image
   const createCategory = async (e) => {
     e.preventDefault();
     if (!canEdit || meLoading) return;
@@ -736,7 +740,10 @@ export default function AdminHotelsPage(props) {
       fd.append("imageFile", categoryImageFile);
 
       await api.post("/categories/with-image", fd, {
-        headers: { ...adminAuthHeader(), "Content-Type": "multipart/form-data" },
+        headers: {
+          Authorization: adminAuthHeader,
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       resetCategoryForm();
@@ -747,7 +754,7 @@ export default function AdminHotelsPage(props) {
       const msg = e2?.response?.data ? JSON.stringify(e2.response.data) : e2?.message ?? String(e2);
       if (status === 409) setError("La categoría ya existe (409).");
       else if (status === 400) setError(`400 Bad Request. Detalle: ${msg}`);
-      else if (status === 401) setError("No autorizado (401). Revisá usuario/clave.");
+      else if (status === 401) setError("No autorizado (401). La sesión admin ya no es válida.");
       else setError(msg);
     } finally {
       setCategorySubmitting(false);
@@ -762,7 +769,7 @@ export default function AdminHotelsPage(props) {
       name: c?.name ?? "",
       slug: c?.slug ?? "",
       description: c?.description ?? "",
-      imageUrl: c?.imageUrl ?? "", // ✅ solo para preview
+      imageUrl: c?.imageUrl ?? "",
     });
     setEditCategoryImageFile(null);
     setIsCategoryEditOpen(true);
@@ -782,11 +789,9 @@ export default function AdminHotelsPage(props) {
 
   const onEditCategoryFileChange = (e) => {
     const file = (e.target.files && e.target.files[0]) || null;
-    setEditCategoryImageFile(file); // ✅ solo 1
+    setEditCategoryImageFile(file);
   };
 
-  // ✅ FIX: SIEMPRE multipart al endpoint real del backend
-  // PUT /categories/{id}/with-image (imageFile opcional)
   const saveEditCategory = async (e) => {
     e.preventDefault();
     if (!canEdit || meLoading) return;
@@ -810,13 +815,15 @@ export default function AdminHotelsPage(props) {
       fd.append("slug", slug.toLowerCase());
       fd.append("description", description);
 
-      // imageFile es opcional en backend (required=false)
       if (editCategoryImageFile) {
         fd.append("imageFile", editCategoryImageFile);
       }
 
       await api.put(`/categories/${editCategory.id}/with-image`, fd, {
-        headers: { ...adminAuthHeader(), "Content-Type": "multipart/form-data" },
+        headers: {
+          Authorization: adminAuthHeader,
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       await loadCategories();
@@ -827,7 +834,7 @@ export default function AdminHotelsPage(props) {
       const msg = e2?.response?.data ? JSON.stringify(e2.response.data) : e2?.message ?? String(e2);
       if (status === 409) setError("No se puede actualizar: conflicto/duplicado (409).");
       else if (status === 400) setError(`400 Bad Request. Detalle: ${msg}`);
-      else if (status === 401) setError("No autorizado (401). Revisá usuario/clave.");
+      else if (status === 401) setError("No autorizado (401). La sesión admin ya no es válida.");
       else setError(msg);
     } finally {
       setCategoryEditSubmitting(false);
@@ -843,19 +850,20 @@ export default function AdminHotelsPage(props) {
     if (!ok) return;
 
     try {
-      await api.delete(`/categories/${c.id}`, { headers: adminAuthHeader() });
+      await api.delete(`/categories/${c.id}`, {
+        headers: { Authorization: adminAuthHeader },
+      });
       await loadCategories();
       await loadHotels();
     } catch (e2) {
       const status = e2?.response?.status;
       const msg = e2?.response?.data ? JSON.stringify(e2.response.data) : e2?.message ?? String(e2);
       if (status === 409) setError("No se puede eliminar: categoría en uso (409).");
-      else if (status === 401) setError("No autorizado (401). Revisá usuario/clave.");
+      else if (status === 401) setError("No autorizado (401). La sesión admin ya no es válida.");
       else setError(msg);
     }
   };
 
-  // UI lists
   const booleanCharacteristics = Array.isArray(characteristics)
     ? characteristics.filter((x) => String(x?.type || "").toUpperCase() === "BOOLEAN")
     : [];
@@ -866,7 +874,6 @@ export default function AdminHotelsPage(props) {
 
   return (
     <>
-      {/* ✅ RESPONSIVE CSS (desktop/tablet/mobile) */}
       <style>{`
         .adminWrap{
           width: 100%;
@@ -1026,7 +1033,6 @@ export default function AdminHotelsPage(props) {
           </div>
         )}
 
-        {/* Tabs */}
         <div className="tabsBar">
           <button
             type="button"
@@ -1046,9 +1052,6 @@ export default function AdminHotelsPage(props) {
         </div>
 
         <div className="tabPanel">
-          {/* =======================
-              TAB 1: HOTELES
-          ======================= */}
           {activeTab === "hotels" ? (
             <>
               <div className="tabPanelHeader">
@@ -1079,7 +1082,6 @@ export default function AdminHotelsPage(props) {
                 </div>
               </div>
 
-              {/* POPUP CREATE HOTEL */}
               {showCreate && canEdit && (
                 <div style={modalOverlay} onClick={() => setShowCreate(false)}>
                   <div
@@ -1250,7 +1252,6 @@ export default function AdminHotelsPage(props) {
                 </div>
               )}
 
-              {/* BOX Hoteles */}
               {hotelsBoxOpen && (
                 <section style={{ ...card, marginTop: 10 }}>
                   <h3 style={{ marginTop: 0, color: "#e8e8e8", display: "flex" }}>Hoteles agregados</h3>
@@ -1371,9 +1372,6 @@ export default function AdminHotelsPage(props) {
               )}
             </>
           ) : (
-            /* =======================
-                TAB 2: CATEGORÍAS
-            ======================= */
             <>
               <div className="tabPanelHeader">
                 <div className="tabPanelActions">
@@ -1456,9 +1454,6 @@ export default function AdminHotelsPage(props) {
           )}
         </div>
 
-        {/* ==========================
-            MODAL EDIT HOTEL
-        ========================== */}
         {isEditOpen && (
           <div style={modalOverlay} onClick={() => setIsEditOpen(false)}>
             <div
@@ -1602,9 +1597,6 @@ export default function AdminHotelsPage(props) {
           </div>
         )}
 
-        {/* ==========================
-            MODAL DELETE
-        ========================== */}
         {isDeleteOpen && (
           <div style={modalOverlay} onClick={closeDeleteModal}>
             <div className="tutelo-modal modalCardWideMobile" style={modalCardWide} onClick={(e) => e.stopPropagation()}>
@@ -1646,9 +1638,6 @@ export default function AdminHotelsPage(props) {
           </div>
         )}
 
-        {/* ==========================
-            ✅ MODAL ADMIN CATEGORÍAS (crear con 1 foto local)
-        ========================== */}
         {showCategoriesAdmin && (
           <div style={modalOverlay} onClick={() => setShowCategoriesAdmin(false)}>
             <div className="tutelo-modal modalCardWideMobile" style={modalCardWide} onClick={(e) => e.stopPropagation()}>
@@ -1679,7 +1668,6 @@ export default function AdminHotelsPage(props) {
                     />
                   </Field>
 
-                  {/* ✅ SOLO 1 ARCHIVO */}
                   <Field label="Imagen de la categoría (1 archivo) *">
                     <input type="file" accept="image/*" onChange={onCategoryFileChange} style={{ color: "#232738" }} />
                     {categoryImageFile && (
@@ -1693,7 +1681,6 @@ export default function AdminHotelsPage(props) {
                 </form>
               </div>
 
-              {/* ✅ FIX: los botones están fuera del form, por eso usamos requestSubmit */}
               <div style={modalFooterSticky}>
                 <button type="button" style={btnSecondary} onClick={resetCategoryForm}>
                   Limpiar
@@ -1720,9 +1707,6 @@ export default function AdminHotelsPage(props) {
           </div>
         )}
 
-        {/* ==========================
-            ✅ MODAL EDIT CATEGORÍA (1 foto local, reemplaza)
-        ========================== */}
         {isCategoryEditOpen && editCategory && (
           <div style={modalOverlay} onClick={closeEditCategory}>
             <div className="tutelo-modal modalCardWideMobile" style={modalCardWide} onClick={(e) => e.stopPropagation()}>
@@ -1753,7 +1737,6 @@ export default function AdminHotelsPage(props) {
                     />
                   </Field>
 
-                  {/* ✅ Preview (solo lectura) */}
                   {editCategory.imageUrl ? (
                     <div style={{ display: "grid", gap: 8 }}>
                       <span style={{ fontSize: 13, color: "#232738", fontWeight: 800 }}>Imagen actual</span>
@@ -1773,7 +1756,6 @@ export default function AdminHotelsPage(props) {
                     <div style={{ color: "#232738", opacity: 0.8 }}>Esta categoría no tiene imagen. Subí una.</div>
                   )}
 
-                  {/* ✅ SOLO 1 ARCHIVO (reemplaza) */}
                   <Field label="Reemplazar imagen (1 archivo)">
                     <input type="file" accept="image/*" onChange={onEditCategoryFileChange} style={{ color: "#232738" }} />
                     {editCategoryImageFile && (
@@ -1787,7 +1769,6 @@ export default function AdminHotelsPage(props) {
                 </form>
               </div>
 
-              {/* ✅ FIX: botón fuera del form -> requestSubmit */}
               <div style={modalFooterSticky}>
                 <button type="button" style={btnSecondary} onClick={closeEditCategory}>
                   Cancelar
@@ -1853,7 +1834,6 @@ function Switch({ label, checked, onChange, disabled }) {
   );
 }
 
-/* estilos base */
 const card = { background: "#2d66f5", border: "1px solid #2d66f5", borderRadius: 16, padding: 16 };
 const grid2 = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
 const grid3 = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 };
